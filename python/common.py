@@ -55,6 +55,12 @@ GPUSpec = {
         "volume": 80,
         "intra_node_bw": 180,
         "inter_node_bw": 39,
+    },
+    
+    "260-72": {
+        "volume": 72,
+        "intra_node_bw": 150,
+        "inter_node_bw": 75,
     }
 }
 
@@ -97,7 +103,7 @@ class ModelConfig:
 class TestConfig:
     device_nums: List[int] = None
     s: int = 5000
-    gpu: str = "H800-80"
+    gpu: str = "260-72"
     model_config: ModelConfig = None
     tp_nums:  List[int] = None
     debug: bool = False
