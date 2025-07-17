@@ -1,0 +1,100 @@
+GPU Spec,Sequence_len
+"""TG260-1dNet"": {
+        ""volume"": 72,
+        ""gpus_per_node"": 16,
+        ""ar_bw"": 75,
+        ""a2a_bw"": 150,
+        ""pcie_bw"": 20,
+    }",5000.0
+"""TG260X-32"": {
+        ""volume"": 72,
+        ""gpus_per_node"": 32,
+        ""ar_bw"": 75,
+        ""a2a_bw"": 75,
+        ""pcie_bw"": 20,
+    }",10000.0
+"""TG260X-64"": {
+        ""volume"": 72,
+        ""gpus_per_node"": 64,
+        ""ar_bw"": 75,
+        ""a2a_bw"": 75,
+        ""pcie_bw"": 20,
+    }",20000.0
+"""TG260X-128"": {
+        ""volume"": 72,
+        ""gpus_per_node"": 128,
+        ""ar_bw"": 75,
+        ""a2a_bw"": 75,
+        ""pcie_bw"": 20,
+    }",40000.0
+"""TG260X-288"": {
+        ""volume"": 72,
+        ""gpus_per_node"": 288,
+        ""ar_bw"": 75,
+        ""a2a_bw"": 75,
+        ""pcie_bw"": 20,
+    }",80000.0
+"""TG260-2dNet"": {
+        ""volume"": 72,
+        ""gpus_per_node"": 16,
+        ""ar_bw"": 75,
+        ""a2a_bw"": 75,
+        ""pcie_bw"": 20,
+    }",
+,
+,
+,
+,
+,
+,
+,
+通信脚本更改：,
+"    def calculate_alltoall_time(self, d: int, tp: int, b_mla: int, is_dispatch: bool = True) -> float:
+        """"""
+        Per layer dispatch/combine duration. By default, dispatch in fp8 type and combine in bf16 type.
+        """"""
+        #ar_bw = GPUSpec[self.gpu]['ar_bw']
+        a2a_bw = GPUSpec[self.gpu]['a2a_bw']
+        pcie_bw = GPUSpec[self.gpu]['pcie_bw']
+        gpus_per_node = GPUSpec[self.gpu]['gpus_per_node']
+        model_config = self.model_config
+        effective_a2a_bw = a2a_bw
+        if d > gpus_per_node:
+            effective_a2a_bw =pcie_bw
+        ele_type = 1 if is_dispatch else 2
+        comm_duration = param_num_to_GB(
+            model_config.d_h * model_config.topk * b_mla / tp * ele_type) / effective_a2a_bw * 10 ** 6  # in us
+        return max(comm_duration, 5)
+        ",
+,
+,
+,
+,
+,
+,
+,
+,
+,
+,
+,
+,
+,
+,
+,
+,
+,
+,
+,
+"    def calculate_allreduce_time(self, tp: int, b_mla: int) -> float:
+        """"""
+        Per layer allreduce duration. By default, allreduce only performs inside nodes and in bf16 type.
+        """"""
+        intra_node_bw = GPUSpec[self.gpu]['ar_bw']
+
+        model_config = self.model_config
+
+        ele_type = 2  # bf16
+        intra_node_comm_duration = param_num_to_GB(
+            2 * (tp - 1) / tp * model_config.d_h * b_mla * ele_type) / intra_node_bw * 10 ** 6
+        # lower bound for latency bound communication
+        return max(intra_node_comm_duration, 5)",

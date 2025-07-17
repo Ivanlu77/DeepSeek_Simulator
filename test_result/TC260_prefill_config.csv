@@ -1,0 +1,32 @@
+gpu_type,sm,comm_sm,fp16,fp8,fp4,mem,mem_bw,ar_bw,a2a_bw,pcie_bw,gpu_per_node,Unnamed: 12,Unnamed: 13,Seq_length list,KV_Cache_rate,TP list,DP list
+TG260_1dNet,100.0,10.0,320.0,640.0,0.0,72.0,1800.0,90.0,180.0,25.0,16.0,,,"[4383, 8766, 17532, 35064, 70128]",0.563,"[1, 2, 4]","[8, 16, 32, 64, 128]"
+TG260X-32,100.0,10.0,320.0,640.0,0.0,72.0,1800.0,90.0,90.0,25.0,32.0,,,,,,
+TG260X-64,100.0,10.0,320.0,640.0,0.0,72.0,1800.0,90.0,90.0,25.0,64.0,,,,,,
+TG260X-128,100.0,10.0,320.0,640.0,0.0,72.0,1800.0,90.0,90.0,25.0,128.0,,,,,,
+TG260X-288,100.0,10.0,320.0,640.0,0.0,72.0,1800.0,90.0,90.0,25.0,288.0,,,,,,
+TG260-2dNet,100.0,10.0,320.0,640.0,0.0,72.0,1800.0,90.0,90.0,25.0,16.0,,,,,,
+,,,,,,,,,,,,,,,,,
+通信脚本：,,,,,,,,,,,,,,,,,
+"def _prefill_alltoall(args: ModelArgs, gpu, seq_len, tp, dp, static_latency=0.05):
+    device_number = tp * dp
+    if gpu.gpu_per_node < device_number:
+        dp_intranode = gpu.gpu_per_node/tp
+        dispatch_node = 4
+        dispatch_size = (dispatch_node - 1) * dp_intranode * seq_len * \
+            args.n_activated_experts / gpu.gpu_per_node * args.dim / 1024/1024
+        comm_bw = gpu.get_pcie_bw() * gpu.gpu_per_node
+    else:
+        # SuperNode
+        expert_num = math.ceil(args.n_routed_experts / gpu.gpu_per_node)
+        dispatch_prob = (args.n_routed_experts - expert_num) / \
+            args.n_routed_experts
+        dispatch_size = dispatch_prob * args.n_activated_experts * \
+            seq_len/tp * args.dim / 1024/1024
+        comm_bw = gpu.get_a2a_bw()
+
+    combine_size = 2 * dispatch_size  # fp16
+    if gpu.get_fp4_flops != 0:
+        dispatch_size = dispatch_size / 2
+    dispatch_time = dispatch_size / comm_bw + static_latency
+    combine_time = combine_size / comm_bw + static_latency
+    return dispatch_time, combine_time",,,,,,,,,,,,,,,,,

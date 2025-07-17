@@ -1,6 +1,6 @@
 import math
 from dataclasses import dataclass
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 from itertools import chain
 import logging
 
@@ -48,17 +48,100 @@ def param_num_to_GB(param_num, ele_size=1):
 GPUSpec = {
     "H20-96": {
         "volume": 96,               # GB
-        "intra_node_bw": 180,       # 机内卡间实际可达带宽 GB/s
-        "inter_node_bw": 39,        # 机间卡间实际可达带宽 GB/s
+        "gpus_per_node": 8,         # 每个节点GPU数量
+        "ar_bw": 180,               # AllReduce带宽 GB/s
+        "a2a_bw": 180,              # AllToAll带宽 GB/s  
+        "pcie_bw": 39,              # PCIe带宽 GB/s
+        "sequence_length": 5000,    # 序列长度
+        "intra_node_bw": 180,       # 机内卡间实际可达带宽 GB/s (保持向后兼容)
+        "inter_node_bw": 39,        # 机间卡间实际可达带宽 GB/s (保持向后兼容)
     },
     "H800-80": {
         "volume": 80,
+        "gpus_per_node": 8,
+        "ar_bw": 180,
+        "a2a_bw": 180,
+        "pcie_bw": 39,
+        "sequence_length": 5000,    # 序列长度
         "intra_node_bw": 180,
         "inter_node_bw": 39,
     },
     
+    # TC260 系列GPU配置
+    "TC260-1dNet": {
+        "volume": 72,
+        "gpus_per_node": 16,
+        "ar_bw": 75,
+        "a2a_bw": 150,
+        "pcie_bw": 20,
+        "sequence_length": 5000,    # 序列长度
+        "intra_node_bw": 150,       # 保持向后兼容
+        "inter_node_bw": 75,        # 保持向后兼容
+    },
+    
+    "TC260X-32": {
+        "volume": 72,
+        "gpus_per_node": 32,
+        "ar_bw": 75,
+        "a2a_bw": 75,
+        "pcie_bw": 20,
+        "sequence_length": 10000,   # 序列长度
+        "intra_node_bw": 75,
+        "inter_node_bw": 75,
+    },
+    
+    "TC260X-64": {
+        "volume": 72,
+        "gpus_per_node": 64,
+        "ar_bw": 75,
+        "a2a_bw": 75,
+        "pcie_bw": 20,
+        "sequence_length": 20000,   # 序列长度
+        "intra_node_bw": 75,
+        "inter_node_bw": 75,
+    },
+    
+    "TC260X-128": {
+        "volume": 72,
+        "gpus_per_node": 128,
+        "ar_bw": 75,
+        "a2a_bw": 75,
+        "pcie_bw": 20,
+        "sequence_length": 40000,   # 序列长度
+        "intra_node_bw": 75,
+        "inter_node_bw": 75,
+    },
+    
+    "TC260X-288": {
+        "volume": 72,
+        "gpus_per_node": 288,
+        "ar_bw": 75,
+        "a2a_bw": 75,
+        "pcie_bw": 20,
+        "sequence_length": 80000,   # 序列长度
+        "intra_node_bw": 75,
+        "inter_node_bw": 75,
+    },
+    
+    "TC260-2dNet": {
+        "volume": 72,
+        "gpus_per_node": 16,
+        "ar_bw": 75,
+        "a2a_bw": 75,
+        "pcie_bw": 20,
+        "sequence_length": 5000,    # 序列长度
+        "intra_node_bw": 75,
+        "inter_node_bw": 75,
+    },
+
+    # 保持原有的260-72配置
     "260-72": {
         "volume": 72,
+        "gpus_per_node": 8,
+        "ar_bw": 75,
+        "a2a_bw": 150,
+        "pcie_bw": 20,
+        "sequence_length": 5000,    # 序列长度
         "intra_node_bw": 150,
         "inter_node_bw": 75,
     }
@@ -101,11 +184,11 @@ class ModelConfig:
 
 @dataclass
 class TestConfig:
-    device_nums: List[int] = None
+    device_nums: Optional[List[int]] = None
     s: int = 5000
     gpu: str = "260-72"
-    model_config: ModelConfig = None
-    tp_nums:  List[int] = None
+    model_config: Optional[ModelConfig] = None
+    tp_nums: Optional[List[int]] = None
     debug: bool = False
 
     def __post_init__(self):
@@ -126,6 +209,7 @@ class TestConfig:
 
         logger.debug(f"Search space: ")
         logger.debug(f"GPU Type: {self.gpu}")
+        assert self.tp_nums is not None
         for tp, b_mla_and_device_pair in zip(self.tp_nums, self.b_mla_and_device_pair):
             logger.debug(f"TP={tp:2}")
             logger.debug(
@@ -134,9 +218,12 @@ class TestConfig:
                 f"\t\t Max batch size per GPU: {b_mla_and_device_pair['b_mla_peak']}")
 
     def get_tp_configs(self):
+        assert self.tp_nums is not None
         return self.tp_nums
 
     def get_b_mla_device_pair(self):
+        assert self.tp_nums is not None
+        assert self.device_nums is not None
         b_mla_and_device_pair = []
         for tp in self.tp_nums:
             device_nums = []
@@ -155,6 +242,7 @@ class TestConfig:
         """
             volume * d - model_config.attention_param_num
         """
+        assert self.model_config is not None
         model_config = self.model_config
         total_weights_fp8 = param_num_to_GB(
             model_config.total_nodup_expert_params +
@@ -189,7 +277,9 @@ class TestConfig:
         )
         return b_mla
 
-    def generate_b_and_m_per_groups(self) -> List[List[Tuple[int, int, int, int]]]:
+    def generate_b_and_m_per_groups(self) -> List[Tuple[int, int, int, int, int]]:
+        assert self.tp_nums is not None
+        assert self.model_config is not None
         configs = []
         print("Generate All Configs: ")
         for tp, b_mla_and_device_pair in zip(self.tp_nums, self.b_mla_and_device_pair):
@@ -214,30 +304,26 @@ class TestConfig:
         """
         Per layer dispatch/combine duration. By default, dispatch in fp8 type and combine in bf16 type.
         """
-        inter_node_bw = GPUSpec[self.gpu]['inter_node_bw']
-        intra_node_bw = GPUSpec[self.gpu]['intra_node_bw']
-
+        assert self.model_config is not None
+        #ar_bw = GPUSpec[self.gpu]['ar_bw']
+        a2a_bw = GPUSpec[self.gpu]['a2a_bw']
+        pcie_bw = GPUSpec[self.gpu]['pcie_bw']
+        gpus_per_node = GPUSpec[self.gpu]['gpus_per_node']
         model_config = self.model_config
-        inter_node_token = 8
-        if d <= (model_config.topk + 1) * 8:
-            inter_node_token = math.ceil(d / 8) - 1
-        else:
-            inter_node_token = model_config.topk
-
+        effective_a2a_bw = a2a_bw
+        if d > gpus_per_node:
+            effective_a2a_bw =pcie_bw
         ele_type = 1 if is_dispatch else 2
-        inter_node_comm_duration = param_num_to_GB(
-            model_config.d_h * inter_node_token * b_mla / tp * ele_type) / inter_node_bw * 10 ** 6  # in us
-
-        intra_node_comm_duration = param_num_to_GB(
-            model_config.d_h * min(model_config.topk - 1, 8) * b_mla * ele_type) / intra_node_bw * 10 ** 6
-        return max(inter_node_comm_duration, 5)
-        # return max(inter_node_comm_duration, intra_node_comm_duration)
+        comm_duration = param_num_to_GB(
+            model_config.d_h * model_config.topk * b_mla / tp * ele_type) / effective_a2a_bw * 10 ** 6  # in us
+        return max(comm_duration, 5)
 
     def calculate_allreduce_time(self, tp: int, b_mla: int) -> float:
         """
         Per layer allreduce duration. By default, allreduce only performs inside nodes and in bf16 type.
         """
-        intra_node_bw = GPUSpec[self.gpu]['intra_node_bw']
+        assert self.model_config is not None
+        intra_node_bw = GPUSpec[self.gpu]['ar_bw']
 
         model_config = self.model_config
 
@@ -246,7 +332,6 @@ class TestConfig:
             2 * (tp - 1) / tp * model_config.d_h * b_mla * ele_type) / intra_node_bw * 10 ** 6
         # lower bound for latency bound communication
         return max(intra_node_comm_duration, 5)
-
 
 if __name__ == '__main__':
     config = TestConfig(gpu="H20-96", debug=True)
