@@ -6,7 +6,7 @@ import sys
 import subprocess
 from datetime import datetime
 
-# 添加python目录到路径
+
 sys.path.append(os.path.join(os.path.dirname(__file__), 'python'))
 
 try:
@@ -54,12 +54,12 @@ def create_output_directory(gpu_type):
 
 def get_input_files():
     """获取输入文件路径"""
-    base_dir = "test_result"
+    base_dir = "data"
     files = {
-        "dense_gemm": f"{base_dir}/TC260_dense_gemm.csv",
-        "group_gemm": f"{base_dir}/TC260_group_gemm.csv", 
-        "batch_gemm": f"{base_dir}/TC260_batch_gemm.csv",
-        "mla": f"{base_dir}/TC260_mla.csv"
+        "dense_gemm": f"{base_dir}/H800_dense_gemm.csv",
+        "group_gemm": f"{base_dir}/H800_group_gemm.csv", 
+        "batch_gemm": f"{base_dir}/H800_batch_gemm.csv",
+        "mla": f"{base_dir}/H800_mla.csv"
     }
     
     
@@ -83,11 +83,11 @@ def run_process_table(gpu_type, output_dir, input_files):
     
     try:
         result = subprocess.run(cmd, check=True, capture_output=True, text=True)
-        print("✅ 执行成功!")
+        print("执行成功!")
         print(result.stdout)
         return True
     except subprocess.CalledProcessError as e:
-        print("❌ 执行失败!")
+        print("执行失败!")
         print(f"错误信息: {e}")
         print(f"标准输出: {e.stdout}")
         print(f"标准错误: {e.stderr}")
@@ -129,7 +129,7 @@ def main():
                     # 检查必要文件
                     missing_files = [f for f in input_files.values() if not os.path.exists(f)]
                     if missing_files:
-                        print(f"\n❌ 缺少以下必要文件:")
+                        print(f"\n缺少以下必要文件:")
                         for f in missing_files:
                             print(f"  - {f}")
                         print("\n请先确保所有必要的CSV文件存在于results目录中。")
@@ -140,27 +140,27 @@ def main():
                     success = run_process_table(gpu_type, output_dir, input_files)
                     
                     if success:
-                        print(f"\n🎉 测试完成! 结果已保存到: {output_dir}")
+                        print(f"\n测试完成! 结果已保存到: {output_dir}")
                         print(f"您可以在该目录中找到以下文件:")
                         print(f"  - {gpu_type}-single-batch-comp-comm-overlapping.csv")
                         print(f"  - {gpu_type}-two-microbatch-overlapping.csv")
                     else:
-                        print(f"\n❌ 测试失败，请检查错误信息。")
+                        print(f"\n测试失败，请检查错误信息。")
                     
                     input("\n按回车键继续...")
                 else:
                     print("取消执行。")
                     
             else:
-                print("❌ 无效选择，请重新输入!")
+                print("无效选择，请重新输入!")
                 
         except ValueError:
-            print("❌ 请输入有效的数字!")
+            print("请输入有效的数字!")
         except KeyboardInterrupt:
             print("\n\n程序被用户中断，退出...")
             break
         except Exception as e:
-            print(f"❌ 发生未知错误: {e}")
+            print(f"发生未知错误: {e}")
 
 if __name__ == "__main__":
     main() 

@@ -1,7 +1,7 @@
 import pandas as pd
 import os
 
-def extract_excel_to_csv(excel_file="DSV3_MLA_GEMM_260.xlsx", output_dir="test_result"):
+def extract_excel_to_csv(excel_file="DSV3_MLA_GEMM_260.xlsx", output_dir="data"):
     """
     从Excel文件中提取batch、dense、flash、group数据并转换为CSV格式
     """
