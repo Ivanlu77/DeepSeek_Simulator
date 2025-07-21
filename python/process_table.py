@@ -65,7 +65,10 @@ def process_data(dense_gemm_file: str, group_gemm_file: str, batch_gemm_file: st
                 print(f"可用的h_q值: {mla_df['h_q'].unique()}")
                 continue
                 
-            attn_time = int(attn_data.iloc[0] * 1000)  # type: ignore
+            # 计算基于5000的倍数，自动根据当前序列长度调整
+            base_sequence_length = 5000
+            multiplier = config.s / base_sequence_length
+            attn_time = int(attn_data.iloc[0] * 1000 * multiplier)  # type: ignore
         except (IndexError, KeyError) as e:
             print(f"警告: MLA数据访问失败 (b_mla={b_mla}, tp={tp}): {e}")
             continue
