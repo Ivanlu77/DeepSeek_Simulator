@@ -54,7 +54,7 @@ def create_output_directory(gpu_type):
 
 def get_input_files():
     """获取输入文件路径"""
-    base_dir = "results"
+    base_dir = "test_result"
     files = {
         "dense_gemm": f"{base_dir}/TC260_dense_gemm.csv",
         "group_gemm": f"{base_dir}/TC260_group_gemm.csv", 
@@ -62,20 +62,6 @@ def get_input_files():
         "mla": f"{base_dir}/TC260_mla.csv"
     }
     
-    # 检查文件是否存在，如果不存在则尝试其他命名
-    for key, filepath in files.items():
-        if not os.path.exists(filepath):
-            # 尝试旧的命名格式
-            old_files = {
-                "dense_gemm": f"{base_dir}/H20_dense_gemm.csv",
-                "group_gemm": f"{base_dir}/H20_group_gemm.csv",
-                "batch_gemm": f"{base_dir}/H20_batch_gemm.csv", 
-                "mla": f"{base_dir}/H20_mla.csv"
-            }
-            if os.path.exists(old_files[key]):
-                files[key] = old_files[key]
-            else:
-                print(f"警告: 找不到文件 {filepath}")
     
     return files
 

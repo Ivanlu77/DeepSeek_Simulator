@@ -85,7 +85,7 @@ GPUSpec = {
         "ar_bw": 75,
         "a2a_bw": 75,
         "pcie_bw": 20,
-        "sequence_length": 10000,   # 序列长度
+        "sequence_length": 5000,   # 序列长度
         "intra_node_bw": 75,
         "inter_node_bw": 75,
     },
@@ -96,7 +96,7 @@ GPUSpec = {
         "ar_bw": 75,
         "a2a_bw": 75,
         "pcie_bw": 20,
-        "sequence_length": 20000,   # 序列长度
+        "sequence_length": 5000,   # 序列长度
         "intra_node_bw": 75,
         "inter_node_bw": 75,
     },
@@ -107,7 +107,7 @@ GPUSpec = {
         "ar_bw": 75,
         "a2a_bw": 75,
         "pcie_bw": 20,
-        "sequence_length": 40000,   # 序列长度
+        "sequence_length": 5000,   # 序列长度
         "intra_node_bw": 75,
         "inter_node_bw": 75,
     },
@@ -118,7 +118,7 @@ GPUSpec = {
         "ar_bw": 75,
         "a2a_bw": 75,
         "pcie_bw": 20,
-        "sequence_length": 80000,   # 序列长度
+        "sequence_length": 5000,   # 序列长度
         "intra_node_bw": 75,
         "inter_node_bw": 75,
     },
